@@ -18,6 +18,21 @@ const pathSrc = path.resolve(__dirname, 'src')
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  server: {
+    proxy: {
+      // with options: http://localhost:5173/api/bar-> http://jsonplaceholder.typicode.com/bar
+      '/api': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+      '/echo': {
+        target: 'https://www.postman-echo.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/echo/, ''),
+      },
+    }
+  },
   resolve: {
     alias: {
       '~/': `${pathSrc}/`,
