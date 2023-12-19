@@ -8,6 +8,8 @@ import {ref, onMounted} from 'vue'
 import axios from "axios";
 import {HttpStatusCode} from "axios"
 
+import {CircleCheckFilled, WarningFilled} from '@element-plus/icons-vue'
+
 
 //-------------------全局变量------------------
 
@@ -48,18 +50,18 @@ const resetParams = function () {
 };
 
 const globalVariables = ref([
-  { key: 'proxy_echo_status', value: proxy_echo_status },
-  { key: 'jdbc_type', value: jdbc_type },
-  { key: 'jdbc_url', value: jdbc_url },
-  { key: 'jdbc_username', value: jdbc_username },
-  { key: 'jdbc_password', value: jdbc_password },
-  { key: 'jdbc_is_connected', value: jdbc_is_connected },
-  { key: 'db_list', value: db_list },
-  { key: 'db_name', value: db_name },
-  { key: 'table_list', value: table_list },
-  { key: 'table_name', value: table_name },
+  {key: 'proxy_echo_status', value: proxy_echo_status},
+  {key: 'jdbc_type', value: jdbc_type},
+  {key: 'jdbc_url', value: jdbc_url},
+  {key: 'jdbc_username', value: jdbc_username},
+  {key: 'jdbc_password', value: jdbc_password},
+  {key: 'jdbc_is_connected', value: jdbc_is_connected},
+  {key: 'db_list', value: db_list},
+  {key: 'db_name', value: db_name},
+  {key: 'table_list', value: table_list},
+  {key: 'table_name', value: table_name},
   // { key: 'query_result', value: query_result },
-  { key: 'query_sql', value: query_sql }
+  {key: 'query_sql', value: query_sql}
 ]);
 
 const isEditable = function (variable) {
@@ -217,7 +219,8 @@ const getDbList = function () {
           return;
         }
 
-        db_list.value = result.data;
+        db_list.value = result.data.map(item => ({name: item}));
+        console.log(db_list)
 
         console.log("getDbList: success");
 
@@ -330,7 +333,7 @@ const getTableList = function () {
           return;
         }
 
-        table_list.value = response.data.data
+        table_list.value = response.data.data.map(item => ({name: item}))
 
         console.log("getTableList: success");
 
@@ -401,29 +404,160 @@ onMounted(function () {
 </script>
 
 <template>
-  <div id="cloud-cat-jdbc">
+  <el-main id="cloud-cat-jdbc">
 
-    <div id="jdbc-ui">
+    <el-collapse>
+      <el-collapse-item name="1">
+        <template #title>
+          Jdbc Config
+          <el-icon v-if="jdbc_is_connected" color="green">
+            <CircleCheckFilled/>
+          </el-icon>
+          <el-icon v-else color="orange">
+            <WarningFilled/>
+          </el-icon>
 
-    </div>
+          <div class="collapse-comment">
+            {{jdbc_type}}://{{jdbc_username}}@{{jdbc_url}}
+          </div>
+        </template>
+        <el-row>
+          <el-col :span="8"><p>db_type</p></el-col>
+          <el-col :span="8">
+            <el-input v-model="jdbc_type"/>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="8"><p>db_url</p></el-col>
+          <el-col :span="8">
+            <el-input v-model="jdbc_url"/>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="8"><p>db_username</p></el-col>
+          <el-col :span="8">
+            <el-input v-model="jdbc_username"/>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="8"><p>db_password</p></el-col>
+          <el-col :span="8">
+            <el-input v-model="jdbc_password"/>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :offset="8" :span="4">
+            <el-button type="info" @click="getJdbcConnection">get</el-button>
+          </el-col>
+          <el-col :span="4">
+            <el-button
+                type="success"
+                @click="setJdbcConnection(jdbc_type,jdbc_url,jdbc_username,jdbc_password)"
+            >set
+            </el-button>
+          </el-col>
+        </el-row>
+      </el-collapse-item>
 
-    <div id="fun-call">
-      <el-button @click="getJdbcConnection">
-        getJdbcConnection
-      </el-button>
-      <el-button @click="getDbList">
-        getDbList
-      </el-button>
-      <el-button @click="getDbUsed">
-        getDbUsed
-      </el-button>
-      <el-button @click="getTableList">
-        getTableList
-      </el-button>
-      <br>
+      <el-collapse-item name="2">
+        <template #title>
+          Database Config
+          <el-icon v-if="db_list.some(item => item.name === db_name)" color="green">
+            <CircleCheckFilled/>
+          </el-icon>
+          <el-icon v-else color="orange">
+            <WarningFilled/>
+          </el-icon>
+          <div class="collapse-comment">
+            {{db_name}}
+          </div>
+        </template>
+        <el-row>
+          <el-col :span="8"><p>db_list</p></el-col>
+          <el-col :span="8">
+            <el-table :data="db_list" @row-click="row=>{db_name=row.name;}">
+              <el-table-column prop="name" lable="Database Name"/>
+            </el-table>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="8"><p>db_name</p></el-col>
+          <el-col :span="8">
+            <el-input v-model="db_name"/>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :offset="8" :span="4">
+            <el-button type="info" @click="getDbList">getList</el-button>
+          </el-col>
+          <el-col :span="4">
+            <el-button type="info" @click="getDbUsed">getUsed</el-button>
+          </el-col>
+          <el-col :span="4">
+            <el-button type="success" @click="setDbUsed(db_name)">setUsed</el-button>
+          </el-col>
+        </el-row>
 
-      <el-button
-          @click='
+      </el-collapse-item>
+
+      <el-collapse-item name="3">
+        <template #title>
+          Table Config
+          <el-icon v-if="table_list.some(item => item.name === table_name)" color="green">
+            <CircleCheckFilled/>
+          </el-icon>
+          <el-icon v-else color="orange">
+            <WarningFilled/>
+          </el-icon>
+          <div class="collapse-comment">
+            {{table_name}}
+          </div>
+        </template>
+        <el-row>
+          <el-col :span="8"><p>table_list</p></el-col>
+          <el-col :span="8">
+            <el-table :data="table_list" @row-click="row=>{table_name=row.name;}">
+              <el-table-column prop="name" lable="Table Name"/>
+            </el-table>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="8"><p>table_name</p></el-col>
+          <el-col :span="8">
+            <el-input v-model="table_name"/>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :offset="8" :span="4">
+            <el-button type="info" @click="getTableList">getList</el-button>
+          </el-col>
+          <el-col :span="4">
+            <el-button type="info" @click="queryByTable(table_name,1,10)">query</el-button>
+          </el-col>
+        </el-row>
+
+      </el-collapse-item>
+
+      <el-collapse-item name="5">
+
+
+        <div id="fun-call">
+          <el-button @click="getJdbcConnection">
+            getJdbcConnection
+          </el-button>
+          <el-button @click="getDbList">
+            getDbList
+          </el-button>
+          <el-button @click="getDbUsed">
+            getDbUsed
+          </el-button>
+          <el-button @click="getTableList">
+            getTableList
+          </el-button>
+          <br>
+
+          <el-button
+              @click='
              setJdbcConnection(
                  "MySQL",
                  "localhost:3306",
@@ -431,67 +565,68 @@ onMounted(function () {
                  "TX0A13fA_paste_u"
                  )
           '
-      >
-        setJdbcConnection
-      </el-button>
+          >
+            setJdbcConnection
+          </el-button>
 
-      <el-button @click='setDbUsed("pastedb")'>
-        setDbUsed
-      </el-button>
+          <el-button @click='setDbUsed("pastedb")'>
+            setDbUsed
+          </el-button>
 
-      <el-button @click="queryByTable(table_name,1,10)">
-        queryByTable({{ table_name }},1,10)
-      </el-button>
+          <el-button @click="queryByTable(table_name,1,10)">
+            queryByTable({{ table_name }},1,10)
+          </el-button>
 
-    </div>
+        </div>
 
+        <!--    <div id="var-show">-->
+        <!--      <table>-->
+        <!--        <tr>-->
+        <!--          <th>Variable</th>-->
+        <!--          <th>Value</th>-->
+        <!--        </tr>-->
+        <!--        <tr v-for="(variable, key) in globalVariables" :key="key">-->
+        <!--          <td>{{ key }}</td>-->
+        <!--          <td>{{ variable.value }}</td>-->
+        <!--          <td>-->
+        <!--            &lt;!&ndash;            v-if="(typeof variable.value) in ['string','number','object']"&ndash;&gt;-->
+        <!--            <input v-model="variable.value" placeholder="new"/>-->
+        <!--          </td>-->
+        <!--        </tr>-->
+        <!--      </table>-->
+        <!--    </div>-->
 
+        <div id="jdbc-settings">
+          <el-collapse>
 
+          </el-collapse>
+        </div>
 
-<!--    <div id="var-show">-->
-<!--      <table>-->
-<!--        <tr>-->
-<!--          <th>Variable</th>-->
-<!--          <th>Value</th>-->
-<!--        </tr>-->
-<!--        <tr v-for="(variable, key) in globalVariables" :key="key">-->
-<!--          <td>{{ key }}</td>-->
-<!--          <td>{{ variable.value }}</td>-->
-<!--          <td>-->
-<!--            &lt;!&ndash;            v-if="(typeof variable.value) in ['string','number','object']"&ndash;&gt;-->
-<!--            <input v-model="variable.value" placeholder="new"/>-->
-<!--          </td>-->
-<!--        </tr>-->
-<!--      </table>-->
-<!--    </div>-->
+        <div>
+          <el-table :data="globalVariables">
+            <el-table-column prop="key" label="Variable"></el-table-column>
+            <el-table-column prop="value" label="Value"></el-table-column>
+            <el-table-column label="New Value">
+              <template v-slot="{ row }">
+                <el-input v-if="isEditable(row)" v-model="row.value" placeholder="new"></el-input>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </el-collapse-item>
 
-    <div id="jdbc-settings">
-      <el-collapse>
+    </el-collapse>
 
-      </el-collapse>
-    </div>
-
-    <div>
-      <el-table :data="globalVariables">
-        <el-table-column prop="key" label="Variable"></el-table-column>
-        <el-table-column prop="value" label="Value"></el-table-column>
-        <el-table-column label="New Value">
-          <template v-slot="{ row }">
-            <el-input v-if="isEditable(row)" v-model="row.value" placeholder="new"></el-input>
-          </template>
-        </el-table-column>
-      </el-table>
-    </div>
 
     <div id="result-show">
       <el-table :data="query_result">
         <template v-if="query_result.length > 0">
-          <el-table-column v-for="(value, key) in query_result[0]" :key="key" :prop="key" :label="key" />
+          <el-table-column v-for="(value, key) in query_result[0]" :key="key" :prop="key" :label="key"/>
         </template>
       </el-table>
     </div>
 
-  </div>
+  </el-main>
 
 </template>
 
@@ -502,5 +637,11 @@ onMounted(function () {
   border-collapse: collapse;
   border-spacing: 0;
   overflow: hidden;
+}
+
+.collapse-comment{
+  font-size: smaller;
+  padding-left: 10px;
+  opacity: 60%;
 }
 </style>
