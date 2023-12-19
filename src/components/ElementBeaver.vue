@@ -47,20 +47,25 @@ const resetParams = function () {
   query_sql.value = '';
 };
 
-const globalVariables = {
-  proxy_echo_status,
-  jdbc_type,
-  jdbc_url,
-  jdbc_username,
-  jdbc_password,
-  jdbc_is_connected,
-  db_list,
-  db_name,
-  table_list,
-  table_name,
-  query_result,
-  query_sql
-};
+const globalVariables = ref([
+  { key: 'proxy_echo_status', value: proxy_echo_status },
+  { key: 'jdbc_type', value: jdbc_type },
+  { key: 'jdbc_url', value: jdbc_url },
+  { key: 'jdbc_username', value: jdbc_username },
+  { key: 'jdbc_password', value: jdbc_password },
+  { key: 'jdbc_is_connected', value: jdbc_is_connected },
+  { key: 'db_list', value: db_list },
+  { key: 'db_name', value: db_name },
+  { key: 'table_list', value: table_list },
+  { key: 'table_name', value: table_name },
+  // { key: 'query_result', value: query_result },
+  { key: 'query_sql', value: query_sql }
+]);
+
+const isEditable = function (variable) {
+  const valueType = typeof variable.value;
+  return valueType === 'string' || valueType === 'number' || valueType === 'object';
+}
 
 //-------------------函数------------------
 
@@ -71,11 +76,11 @@ const testProxyConnection = function () {
   axios.get("/echo/get")
       .then(function (response) {
         proxy_echo_status.value = response.statusText;
-        console.log("testProxyConnection: ",response);
+        console.log("testProxyConnection: ", response);
       })
       .catch(function (error) {
         proxy_echo_status.value = error;
-        console.error("testProxyConnection: ",error);
+        console.error("testProxyConnection: ", error);
       })
       .finally(function () {
         console.log("testProxyConnection: axios done")
@@ -97,7 +102,7 @@ const getJdbcConnection = function () {
             result.code !== HttpStatusCode.Ok
         ) {
           if (Object.hasOwn(result, "msg"))
-            window.alert("result.msg" + result.msg)
+            window.alert("getJdbcConnection: " + result.msg)
           console.error("getJdbcConnection: result code error", result);
           // 状态错误，连接未建立
           resetParams()
@@ -127,6 +132,7 @@ const getJdbcConnection = function () {
 
       })
       .catch(function (error) {
+        window.alert("getJdbcConnection: axios error" + error)
         console.error("getJdbcConnection: axios error", error);
       })
       .finally(function () {
@@ -163,7 +169,7 @@ const setJdbcConnection = function (
             result.code !== HttpStatusCode.Ok
         ) {
           if (Object.hasOwn(result, "msg"))
-            window.alert("response.msg" + result.msg)
+            window.alert("setJdbcConnection: " + result.msg)
           resetParams()
           console.error("setJdbcConnection: response code error", result);
           return;
@@ -189,10 +195,197 @@ const setJdbcConnection = function (
       })
 }
 
+//获取可用数据库列表
+const getDbList = function () {
+  console.log("getDbList: called")
+  axios.get("/api/database/getAll")
+      .then(function (response) {
+        // 能到达此处，HTTP的状态码已经有axios校验过，仅需处理若依封装的状态码
+
+        // 从响应中取若依封装的AjaxResult
+        const result = response.data
+        if (
+            !Object.hasOwn(result, "code") ||
+            !Object.hasOwn(result, "data") ||
+            result.code !== HttpStatusCode.Ok
+        ) {
+          if (Object.hasOwn(result, "msg"))
+            window.alert("getDbList: " + result.msg)
+          console.error("getDbList: result code error", result);
+          // 状态错误，连接未建立
+          resetParams()
+          return;
+        }
+
+        db_list.value = result.data;
+
+        console.log("getDbList: success");
+
+      })
+      .catch(function (error) {
+        console.error("getDbList: axios error", error);
+      })
+      .finally(function () {
+        console.log("getDbList: axios done")
+      })
+}
+
+//获取可用数据库列表
+const getDbUsed = function () {
+  console.log("getDbUsed: called")
+  axios.get("/api/database/get")
+      .then(function (response) {
+        // 能到达此处，HTTP的状态码已经有axios校验过，仅需处理若依封装的状态码
+
+        // 从响应中取若依封装的AjaxResult
+        const result = response.data
+        if (
+            !Object.hasOwn(result, "code") ||
+            !Object.hasOwn(result, "data") ||
+            result.code !== HttpStatusCode.Ok
+        ) {
+          if (Object.hasOwn(result, "msg"))
+            window.alert("getDbUsed: " + result.msg)
+          console.error("getDbUsed: result code error", result);
+          // 状态错误，未指定table
+          db_name.value = "";
+          return;
+        }
+
+        const db_prop = result.data;
+
+        if (
+            !Object.hasOwn(db_prop, "dbname")
+        ) {
+          db_name.value = "";
+          console.error("getDbUsed: response format illegal", db_prop);
+          return;
+        }
+
+        db_name.value = db_prop.dbname;
+
+        console.log("getDbUsed: success");
+
+      })
+      .catch(function (error) {
+        console.error("getDbUsed: axios error", error);
+      })
+      .finally(function () {
+        console.log("getDbUsed: axios done")
+      })
+}
+
+//设置连接
+const setDbUsed = function (new_db_name) {
+
+  console.log("setDbUsed: called", new_db_name)
+
+  axios.post("/api/database/set", null, {
+    params: {
+      dbname: new_db_name
+    }
+  })
+      .then(function (response) {
+        const result = response.data
+        if (
+            !Object.hasOwn(result, "code") ||
+            result.code !== HttpStatusCode.Ok
+        ) {
+          if (Object.hasOwn(result, "msg"))
+            window.alert("setDbUsed: " + result.msg)
+          resetParams()
+          console.error("setDbUsed: response code error", result);
+          return;
+        }
+
+        db_name.value = new_db_name;
+
+        console.log("setDbUsed:success", new_db_name);
+      })
+      .catch(function (error) {
+        resetParams()
+        console.error("setDbUsed: axios error", error);
+      })
+}
+
+//获取可用数据库列表
+const getTableList = function () {
+  console.log("getTableList: called")
+  axios.get("/api/tables")
+      .then(function (response) {
+        // 能到达此处，HTTP的状态码已经有axios校验过，仅需处理若依封装的状态码
+
+        // 从响应中取若依封装的AjaxResult
+        const result = response.data
+        if (
+            !Object.hasOwn(result, "code") ||
+            !Object.hasOwn(result, "data") ||
+            result.code !== HttpStatusCode.Ok
+        ) {
+          if (Object.hasOwn(result, "msg"))
+            window.alert("getTableList: " + result.msg)
+          console.error("getTableList: result code error", result);
+          // 状态错误，数据库未指定模式
+          resetParams()
+          return;
+        }
+
+        table_list.value = response.data.data
+
+        console.log("getTableList: success");
+
+      })
+      .catch(function (error) {
+        console.error("getTableList: axios error", error);
+      })
+      .finally(function () {
+        console.log("getTableList: axios done")
+      })
+}
+
+const queryByTable = function (query_table_name, page_num, page_size) {
+  if (query_table_name === "" || page_num < 1) {
+    console.log("queryByTable: invalid params")
+    window.alert("queryByTable: invalid params")
+    return
+  }
+  axios.get("/api/table/get", {
+    params: {
+      tbname: query_table_name,
+      pagenum: page_num,
+      pagesize: page_size
+    }
+  })
+      .then(function (response) {
+        const result = response.data
+        if (
+            !Object.hasOwn(result, "code") ||
+            !Object.hasOwn(result, "data") ||
+            result.code !== HttpStatusCode.Ok
+        ) {
+          if (Object.hasOwn(result, "msg"))
+            window.alert("queryByTable: " + result.msg)
+          console.error("queryByTable: result code error", result);
+          query_result.value = [];
+          table_name.value = "";
+          return;
+        }
+        query_result.value = result.data
+        console.log("queryByTable: success");
+
+      })
+      .catch(function (error) {
+        console.error("queryByTable: axios error", error);
+      })
+      .finally(function () {
+        console.log("queryByTable: axios done")
+      })
+}
+
 
 //------------------初始化语句--------------------
 
-onMounted(() => {
+onMounted(function () {
   resetParams();
   testProxyConnection();
   // setJdbcConnection(
@@ -208,31 +401,106 @@ onMounted(() => {
 </script>
 
 <template>
-  <div id="cloud-cat">
+  <div id="cloud-cat-jdbc">
+
+    <div id="jdbc-ui">
+
+    </div>
 
     <div id="fun-call">
       <el-button @click="getJdbcConnection">
         getJdbcConnection
       </el-button>
+      <el-button @click="getDbList">
+        getDbList
+      </el-button>
+      <el-button @click="getDbUsed">
+        getDbUsed
+      </el-button>
+      <el-button @click="getTableList">
+        getTableList
+      </el-button>
+      <br>
+
+      <el-button
+          @click='
+             setJdbcConnection(
+                 "MySQL",
+                 "localhost:3306",
+                 "paste_u",
+                 "TX0A13fA_paste_u"
+                 )
+          '
+      >
+        setJdbcConnection
+      </el-button>
+
+      <el-button @click='setDbUsed("pastedb")'>
+        setDbUsed
+      </el-button>
+
+      <el-button @click="queryByTable(table_name,1,10)">
+        queryByTable({{ table_name }},1,10)
+      </el-button>
+
     </div>
 
-    <div id="var-show">
-<!--      <el-table :data="globalVariables">-->
-<!--        <el-table-column prop="key" label="变量名" width="180" />-->
-<!--        <el-table-column prop="value" label="值" width="180" />-->
-<!--      </el-table>-->
-      <table>
-        <tr>
-          <th>Variable</th>
-          <th>Value</th>
-        </tr>
-        <tr v-for="(value, key) in globalVariables" :key="key">
-          <td>{{ key }}</td>
-          <td>{{ value.value }}</td>
-        </tr>
-      </table>
+
+
+
+<!--    <div id="var-show">-->
+<!--      <table>-->
+<!--        <tr>-->
+<!--          <th>Variable</th>-->
+<!--          <th>Value</th>-->
+<!--        </tr>-->
+<!--        <tr v-for="(variable, key) in globalVariables" :key="key">-->
+<!--          <td>{{ key }}</td>-->
+<!--          <td>{{ variable.value }}</td>-->
+<!--          <td>-->
+<!--            &lt;!&ndash;            v-if="(typeof variable.value) in ['string','number','object']"&ndash;&gt;-->
+<!--            <input v-model="variable.value" placeholder="new"/>-->
+<!--          </td>-->
+<!--        </tr>-->
+<!--      </table>-->
+<!--    </div>-->
+
+    <div id="jdbc-settings">
+      <el-collapse>
+
+      </el-collapse>
+    </div>
+
+    <div>
+      <el-table :data="globalVariables">
+        <el-table-column prop="key" label="Variable"></el-table-column>
+        <el-table-column prop="value" label="Value"></el-table-column>
+        <el-table-column label="New Value">
+          <template v-slot="{ row }">
+            <el-input v-if="isEditable(row)" v-model="row.value" placeholder="new"></el-input>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+
+    <div id="result-show">
+      <el-table :data="query_result">
+        <template v-if="query_result.length > 0">
+          <el-table-column v-for="(value, key) in query_result[0]" :key="key" :prop="key" :label="key" />
+        </template>
+      </el-table>
     </div>
 
   </div>
 
 </template>
+
+<style scoped>
+
+#var-show td {
+  border: solid #589ef8;
+  border-collapse: collapse;
+  border-spacing: 0;
+  overflow: hidden;
+}
+</style>
