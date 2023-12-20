@@ -158,6 +158,10 @@ const setJdbcConnection = function (
   )
   axios.post("/api/config/set", null, {
     params: {
+      // db: '`' + new_jdbc_type + '`',
+      // address: '`' + new_jdbc_url + '`',
+      // username: '`' + new_jdbc_username + '`',
+      // password: '`' + new_jdbc_password + '`'
       db: new_jdbc_type,
       address: new_jdbc_url,
       username: new_jdbc_username,
@@ -285,7 +289,7 @@ const setDbUsed = function (new_db_name) {
 
   axios.post("/api/database/set", null, {
     params: {
-      dbname: new_db_name
+      dbname: '`' + new_db_name + '`'
     }
   })
       .then(function (response) {
@@ -405,7 +409,12 @@ onMounted(function () {
 
 <template>
   <el-main id="cloud-cat-jdbc">
-
+<!--    <el-button @click="getDbList">-->
+<!--      getDbList-->
+<!--    </el-button>-->
+<!--    <el-table :data="db_list" @row-click="row=>{db_name=row.name;}">-->
+<!--      <el-table-column prop="name" label="Database Name"/>-->
+<!--    </el-table>-->
     <el-collapse>
       <el-collapse-item name="1">
         <template #title>
@@ -416,9 +425,8 @@ onMounted(function () {
           <el-icon v-else color="orange">
             <WarningFilled/>
           </el-icon>
-
-          <div class="collapse-comment">
-            {{jdbc_type}}://{{jdbc_username}}@{{jdbc_url}}
+          <div v-show="jdbc_is_connected" class="collapse-comment">
+            {{ jdbc_type }}://{{ jdbc_username }}@{{ jdbc_url }}
           </div>
         </template>
         <el-row>
@@ -469,25 +477,38 @@ onMounted(function () {
             <WarningFilled/>
           </el-icon>
           <div class="collapse-comment">
-            {{db_name}}
+            {{ db_name }}
           </div>
         </template>
         <el-row>
           <el-col :span="8"><p>db_list</p></el-col>
-          <el-col :span="8">
-            <el-table :data="db_list" @row-click="row=>{db_name=row.name;}">
-              <el-table-column prop="name" lable="Database Name"/>
-            </el-table>
+<!--          <el-col :span="8" v-show="db_list.length>0">-->
+<!--            <el-table :data="db_list" @row-click="row=>{db_name=row.name;}">-->
+<!--              <el-table-column prop="name" label="Database Name"/>-->
+<!--            </el-table>-->
+<!--          </el-col>-->
+          <el-col :span="4" v-show="db_list.length>0">
+            <el-select v-model="db_name" value-key="name" placeholder="select db name">
+              <el-option
+                v-for="item in db_list"
+                :key="item.name"
+                :label="item.name"
+                :value="item.name"
+              />
+            </el-select>
+<!--            <el-table :data="db_list" @row-click="row=>{db_name=row.name;}">-->
+<!--              <el-table-column prop="name" label="Database Name"/>-->
+<!--            </el-table>-->
           </el-col>
         </el-row>
+<!--        <el-row>-->
+<!--          <el-col :span="8"><p>db_name</p></el-col>-->
+<!--          <el-col :span="8">-->
+<!--            <el-input v-model="db_name"/>-->
+<!--          </el-col>-->
+<!--        </el-row>-->
         <el-row>
-          <el-col :span="8"><p>db_name</p></el-col>
-          <el-col :span="8">
-            <el-input v-model="db_name"/>
-          </el-col>
-        </el-row>
-        <el-row>
-          <el-col :offset="8" :span="4">
+          <el-col :offset="4" :span="4">
             <el-button type="info" @click="getDbList">getList</el-button>
           </el-col>
           <el-col :span="4">
@@ -510,23 +531,31 @@ onMounted(function () {
             <WarningFilled/>
           </el-icon>
           <div class="collapse-comment">
-            {{table_name}}
+            {{ table_name }}
           </div>
         </template>
         <el-row>
           <el-col :span="8"><p>table_list</p></el-col>
-          <el-col :span="8">
-            <el-table :data="table_list" @row-click="row=>{table_name=row.name;}">
-              <el-table-column prop="name" lable="Table Name"/>
-            </el-table>
-          </el-col>
+<!--          <el-col :span="8" v-show="table_list.length>0">-->
+<!--            <el-table :data="table_list" @row-click="row=>{table_name=row.name;}">-->
+<!--              <el-table-column prop="name" lable="Table Name"/>-->
+<!--            </el-table>-->
+<!--          </el-col>-->
+          <el-select v-model="table_name" value-key="name" placeholder="select table name">
+            <el-option
+                v-for="item in table_list"
+                :key="item.name"
+                :label="item.name"
+                :value="item.name"
+            />
+          </el-select>
         </el-row>
-        <el-row>
-          <el-col :span="8"><p>table_name</p></el-col>
-          <el-col :span="8">
-            <el-input v-model="table_name"/>
-          </el-col>
-        </el-row>
+<!--        <el-row>-->
+<!--          <el-col :span="8"><p>table_name</p></el-col>-->
+<!--          <el-col :span="8">-->
+<!--            <el-input v-model="table_name"/>-->
+<!--          </el-col>-->
+<!--        </el-row>-->
         <el-row>
           <el-col :offset="8" :span="4">
             <el-button type="info" @click="getTableList">getList</el-button>
@@ -639,7 +668,7 @@ onMounted(function () {
   overflow: hidden;
 }
 
-.collapse-comment{
+.collapse-comment {
   font-size: smaller;
   padding-left: 10px;
   opacity: 60%;
